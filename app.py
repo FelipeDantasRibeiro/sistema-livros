@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-📚 SISTEMA DE REGISTRO DE LIVROS - BIBLIOTECA PESSOAL ACADÊMICA
-Versão Completa e Corrigida
+📚 SISTEMA DE REGISTRO DE LIVROS - BIBLIOTECA PESSOAL
 """
 
 import os
-import json
-import csv
-from io import StringIO
 from flask import Flask, render_template_string, request, redirect, url_for, flash, session, jsonify, get_flashed_messages, Response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 import secrets
+import csv
+from io import StringIO
 
 # =============================================
 # CONFIGURAÇÃO DA APLICAÇÃO
@@ -61,48 +59,16 @@ def get_flashed_messages_html():
         alert_class = {
             'success': 'alert-success',
             'error': 'alert-danger', 
-            'warning': 'alert-warning',
-            'info': 'alert-info'
+            'warning': 'alert-warning'
         }.get(category, 'alert-info')
         
         messages_html.append(f'''
             <div class="alert {alert_class} alert-dismissible fade show" role="alert">
-                <i class="fas fa-{"check-circle" if category == "success" else "exclamation-triangle" if category == "warning" else "info-circle"} me-2"></i>
                 {message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         ''')
     return ''.join(messages_html)
-
-def calcular_estatisticas(usuario_id):
-    """Calcula estatísticas completas do usuário"""
-    livros = Livro.query.filter_by(usuario_id=usuario_id).all()
-    total_livros = len(livros)
-    livros_lidos = len([l for l in livros if l.status == 'lido'])
-    livros_lendo = len([l for l in livros if l.status == 'lendo'])
-    livros_quero_ler = len([l for l in livros if l.status == 'quero_ler'])
-    
-    total_paginas = sum(l.paginas for l in livros)
-    paginas_lidas = sum(l.paginas_lidas for l in livros)
-    progresso_leitura = (paginas_lidas / total_paginas * 100) if total_paginas > 0 else 0
-    
-    generos = {}
-    for livro in livros:
-        if livro.status == 'lido':
-            generos[livro.genero] = generos.get(livro.genero, 0) + 1
-    
-    genero_mais_lido = max(generos, key=generos.get) if generos else "Nenhum"
-    
-    return {
-        'total_livros': total_livros,
-        'livros_lidos': livros_lidos,
-        'livros_lendo': livros_lendo,
-        'livros_quero_ler': livros_quero_ler,
-        'total_paginas': total_paginas,
-        'paginas_lidas': paginas_lidas,
-        'progresso_leitura': round(progresso_leitura, 1),
-        'genero_mais_lido': genero_mais_lido
-    }
 
 # =============================================
 # TEMPLATES HTML
@@ -114,7 +80,7 @@ BASE_TEMPLATE = '''
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📚 Sistema de Livros</title>
+    <title>Sistema de Livros</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -326,6 +292,7 @@ def dashboard():
     
     usuario = Usuario.query.get(session['usuario_id'])
     
+    # Cálculo simples das estatísticas - CORRIGIDO
     livros_lendo = Livro.query.filter_by(usuario_id=usuario.id, status='lendo').count()
     livros_lidos = Livro.query.filter_by(usuario_id=usuario.id, status='lido').count()
     livros_quero_ler = Livro.query.filter_by(usuario_id=usuario.id, status='quero_ler').count()
@@ -943,7 +910,6 @@ def exportar_dados():
         return redirect(url_for('login'))
     
     usuario = Usuario.query.get(session['usuario_id'])
-    estatisticas = calcular_estatisticas(usuario.id)
     
     export_content = f'''
     <div class="container-fluid">
@@ -974,7 +940,7 @@ def exportar_dados():
                 
                 <div class="row mt-4">
                     <div class="col-md-6 mb-4">
-                        <div class="card export-card h-100">
+                        <div class="card h-100">
                             <div class="card-body text-center p-5">
                                 <i class="fas fa-file-code fa-4x text-primary mb-3"></i>
                                 <h4>Exportar JSON</h4>
@@ -987,7 +953,7 @@ def exportar_dados():
                     </div>
                     
                     <div class="col-md-6 mb-4">
-                        <div class="card export-card h-100">
+                        <div class="card h-100">
                             <div class="card-body text-center p-5">
                                 <i class="fas fa-file-csv fa-4x text-success mb-3"></i>
                                 <h4>Exportar CSV</h4>
@@ -1013,16 +979,13 @@ def exportar_json():
     
     usuario = Usuario.query.get(session['usuario_id'])
     livros = Livro.query.filter_by(usuario_id=usuario.id).all()
-    estatisticas = calcular_estatisticas(usuario.id)
     
     dados = {
-        'metadata': {
-            'sistema': 'LivroTracker',
-            'data_exportacao': datetime.now().isoformat(),
-            'usuario': usuario.nome,
-            'total_registros': len(livros)
+        'usuario': {
+            'nome': usuario.nome,
+            'email': usuario.email,
+            'total_livros': len(livros)
         },
-        'estatisticas': estatisticas,
         'livros': [
             {
                 'titulo': livro.titulo,
@@ -1077,10 +1040,6 @@ def exportar_csv():
     )
     
     return response
-
-# =============================================
-# REDIRECIONAMENTOS PARA COMPATIBILIDADE
-# =============================================
 
 @app.route('/exportar_livros')
 def exportar_livros_redirect():
