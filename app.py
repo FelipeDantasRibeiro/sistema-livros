@@ -948,10 +948,14 @@ def init_database():
     with app.app_context():
         db.create_all()
         print("✅ Banco de dados inicializado!")
+def init_database():
+    with app.app_context():
+        db.create_all()
+        print("✅ Banco de dados inicializado!")
 
+# Inicialização para produção
 if __name__ == '__main__':
     init_database()
-    port = int(os.environ.get('PORT', 5000))
-    print("🚀 Sistema de Registro de Livros iniciando...")
-    print("📚 Acesse: http://localhost:5000")
+    port = int(os.environ.get('PORT', 10000))  # ← MUDEI para 10000
+    print(f"🚀 Sistema de Registro de Livros iniciando na porta {port}...")
     app.run(debug=False, host='0.0.0.0', port=port)
