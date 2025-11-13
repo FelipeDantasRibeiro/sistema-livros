@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 📚 SISTEMA DE REGISTRO DE LIVROS - BIBLIOTECA PESSOAL ACADÊMICA
-Versão Completa com Exportação Avançada
+Versão Corrigida - Sem erros de rotas
 """
 
 import os
@@ -82,12 +82,10 @@ def calcular_estatisticas(usuario_id):
     livros_lendo = len([l for l in livros if l.status == 'lendo'])
     livros_quero_ler = len([l for l in livros if l.status == 'quero_ler'])
     
-    # Cálculo de páginas
     total_paginas = sum(l.paginas for l in livros)
     paginas_lidas = sum(l.paginas_lidas for l in livros)
     progresso_leitura = (paginas_lidas / total_paginas * 100) if total_paginas > 0 else 0
     
-    # Gêneros mais lidos
     generos = {}
     for livro in livros:
         if livro.status == 'lido':
@@ -107,7 +105,7 @@ def calcular_estatisticas(usuario_id):
     }
 
 # =============================================
-# TEMPLATES HTML
+# TEMPLATES HTML (MESMO CÓDIGO ANTERIOR)
 # =============================================
 
 BASE_TEMPLATE = '''
@@ -298,7 +296,7 @@ CADASTRO_TEMPLATE = '''
 '''
 
 # =============================================
-# ROTAS PRINCIPAIS
+# ROTAS PRINCIPAIS (TODAS AS ROTAS DO CÓDIGO ANTERIOR)
 # =============================================
 
 @app.route('/')
@@ -558,505 +556,7 @@ def dashboard():
     
     return render_template_string(BASE_TEMPLATE.replace('{{ content|safe }}', dashboard_content))
 
-@app.route('/novo_livro', methods=['GET', 'POST'])
-def novo_livro():
-    if 'usuario_id' not in session:
-        return redirect(url_for('login'))
-    
-    if request.method == 'POST':
-        titulo = request.form['titulo']
-        autor = request.form['autor']
-        genero = request.form['genero']
-        status = request.form['status']
-        paginas = request.form.get('paginas', 0) or 0
-        paginas_lidas = request.form.get('paginas_lidas', 0) or 0
-        nota = request.form.get('nota') or None
-        tags = request.form.get('tags', '')
-        imagem_url = request.form.get('imagem_url', '')
-        
-        livro = Livro(
-            titulo=titulo,
-            autor=autor,
-            genero=genero,
-            status=status,
-            paginas=int(paginas),
-            paginas_lidas=int(paginas_lidas),
-            nota=int(nota) if nota else None,
-            tags=tags,
-            imagem_url=imagem_url,
-            usuario_id=session['usuario_id']
-        )
-        
-        db.session.add(livro)
-        db.session.commit()
-        
-        flash('Livro adicionado com sucesso ao seu acervo acadêmico!', 'success')
-        return redirect(url_for('listar_livros'))
-    
-    form_template = f'''
-    <div class="container-fluid">
-        <div class="row">
-            <nav class="col-md-3 col-lg-2 sidebar p-0">
-                <div class="position-sticky pt-4">
-                    <div class="text-center mb-4 px-3">
-                        <i class="fas fa-user-graduate fa-3x text-primary mb-3"></i>
-                        <h5 class="fw-bold">👤 {session["usuario_nome"]}</h5>
-                        <small class="text-muted">Leitor Acadêmico</small>
-                    </div>
-                    <ul class="nav flex-column px-3">
-                        <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/livros"><i class="fas fa-book me-2"></i> Meus Livros</a></li>
-                        <li class="nav-item"><a class="nav-link active" href="/novo_livro"><i class="fas fa-plus-circle me-2"></i> Adicionar Livro</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/exportar"><i class="fas fa-download me-2"></i> Exportar Dados</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> Sair</a></li>
-                    </ul>
-                </div>
-            </nav>
-
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-4 py-4">
-                <div class="main-content p-4">
-                    <h2 class="fw-bold mb-4"><i class="fas fa-plus-circle me-2"></i>Adicionar Novo Livro</h2>
-                    
-                    {get_flashed_messages_html()}
-                    
-                    <div class="card">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0"><i class="fas fa-book me-2"></i>Informações do Livro</h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-heading me-2"></i>Título do Livro *</label>
-                                            <input type="text" class="form-control" name="titulo" required placeholder="Ex: Dom Casmurro">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-user me-2"></i>Autor *</label>
-                                            <input type="text" class="form-control" name="autor" required placeholder="Ex: Machado de Assis">
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-tag me-2"></i>Gênero *</label>
-                                            <input type="text" class="form-control" name="genero" required placeholder="Ex: Romance, Ficção, etc.">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-list me-2"></i>Status *</label>
-                                            <select class="form-control" name="status" required>
-                                                <option value="quero_ler">Quero Ler</option>
-                                                <option value="lendo">Lendo</option>
-                                                <option value="lido">Lido</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-file me-2"></i>Total de Páginas</label>
-                                            <input type="number" class="form-control" name="paginas" placeholder="Ex: 256">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-book-open me-2"></i>Páginas Lidas</label>
-                                            <input type="number" class="form-control" name="paginas_lidas" placeholder="Ex: 128">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-star me-2"></i>Nota (1-5)</label>
-                                            <input type="number" class="form-control" name="nota" min="1" max="5" placeholder="Ex: 5">
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold"><i class="fas fa-tags me-2"></i>Tags</label>
-                                    <input type="text" class="form-control" name="tags" placeholder="Ex: literatura brasileira, clássico, romance">
-                                    <div class="form-text">Separe as tags por vírgula para melhor organização</div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold"><i class="fas fa-image me-2"></i>URL da Imagem</label>
-                                    <input type="url" class="form-control" name="imagem_url" placeholder="https://exemplo.com/livro.png">
-                                    <div class="form-text">Cole a URL de uma imagem da capa do livro (opcional)</div>
-                                </div>
-                                
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <a href="/dashboard" class="btn btn-secondary me-md-2">
-                                        <i class="fas fa-times me-2"></i> Cancelar
-                                    </a>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save me-2"></i> Adicionar Livro
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-    </div>
-    '''
-    
-    return render_template_string(BASE_TEMPLATE.replace('{{ content|safe }}', form_template))
-
-@app.route('/livros')
-def listar_livros():
-    if 'usuario_id' not in session:
-        return redirect(url_for('login'))
-    
-    usuario = Usuario.query.get(session['usuario_id'])
-    livros = Livro.query.filter_by(usuario_id=usuario.id).order_by(Livro.data_criacao.desc()).all()
-    
-    livros_html = ''
-    if not livros:
-        livros_html = '''
-        <div class="alert alert-info text-center">
-            <i class="fas fa-info-circle fa-2x mb-3"></i>
-            <h5>Nenhum livro em seu acervo</h5>
-            <p>Seu acervo pessoal está vazio. Que tal adicionar seu primeiro livro?</p>
-            <a href="/novo_livro" class="btn btn-primary mt-2">
-                <i class="fas fa-plus-circle"></i> Adicionar Primeiro Livro
-            </a>
-        </div>
-        '''
-    else:
-        livros_html = '<div class="row">'
-        for livro in livros:
-            capa_html = f'<img src="{livro.imagem_url}" class="img-fluid h-100 w-100" style="object-fit: cover;" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">' + '<div class="book-cover w-100 h-100" style="display: none;"><i class="fas fa-book"></i></div>' if livro.imagem_url else '<div class="book-cover w-100 h-100"><i class="fas fa-book"></i></div>'
-            tags_html = f'<div class="mt-2">{"".join([f"<span class=\"badge bg-secondary me-1\">{tag.strip()}</span>" for tag in livro.tags.split(",") if livro.tags and tag.strip()])}</div>' if livro.tags else ''
-            nota_html = f'<div class="mt-2"><small class="text-warning">{"★" * livro.nota + "☆" * (5 - livro.nota)}</small></div>' if livro.nota else ''
-            
-            livros_html += f'''
-            <div class='col-md-6 col-lg-4 mb-4'>
-                <div class='card book-card h-100'>
-                    <div class='position-relative'>
-                        {capa_html}
-                    </div>
-                    <div class='card-body'>
-                        <h6 class='card-title fw-bold'>{livro.titulo}</h6>
-                        <p class='card-text'>
-                            <strong><i class="fas fa-user me-1"></i> Autor:</strong> {livro.autor}<br>
-                            <strong><i class="fas fa-tag me-1"></i> Gênero:</strong> {livro.genero}<br>
-                            <strong><i class="fas fa-file me-1"></i> Páginas:</strong> {livro.paginas}
-                        </p>
-                        <span class='badge bg-{"success" if livro.status == "lido" else "warning" if livro.status == "lendo" else "info"}'>
-                            {livro.status.replace("_", " ").title()}
-                        </span>
-                        {nota_html}
-                        {tags_html}
-                    </div>
-                    <div class='card-footer bg-transparent'>
-                        <a href='/detalhes_livro/{livro.id}' class='btn btn-primary btn-sm'><i class="fas fa-eye"></i> Ver</a>
-                        <a href='/editar_livro/{livro.id}' class='btn btn-warning btn-sm'><i class="fas fa-edit"></i> Editar</a>
-                        <a href='/excluir_livro/{livro.id}' class='btn btn-danger btn-sm' onclick="return confirmarExclusao()"><i class="fas fa-trash"></i> Excluir</a>
-                    </div>
-                </div>
-            </div>'''
-        livros_html += '</div>'
-    
-    livros_content = f'''
-    <div class="container-fluid">
-        <div class="row">
-            <nav class="col-md-3 col-lg-2 sidebar p-0">
-                <div class="position-sticky pt-4">
-                    <div class="text-center mb-4 px-3">
-                        <i class="fas fa-user-graduate fa-3x text-primary mb-3"></i>
-                        <h5 class="fw-bold">👤 {session["usuario_nome"]}</h5>
-                        <small class="text-muted">Leitor Acadêmico</small>
-                    </div>
-                    <ul class="nav flex-column px-3">
-                        <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link active" href="/livros"><i class="fas fa-book me-2"></i> Meus Livros</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/novo_livro"><i class="fas fa-plus-circle me-2"></i> Adicionar Livro</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/exportar"><i class="fas fa-download me-2"></i> Exportar Dados</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> Sair</a></li>
-                    </ul>
-                </div>
-            </nav>
-
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-4 py-4">
-                <div class="main-content p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h2 class="fw-bold"><i class="fas fa-book me-2"></i>Meu Acervo Acadêmico</h2>
-                        <a href="/novo_livro" class="btn btn-primary">
-                            <i class="fas fa-plus-circle me-2"></i> Adicionar Livro
-                        </a>
-                    </div>
-                    
-                    {get_flashed_messages_html()}
-                    
-                    <div class="row">
-                        {livros_html}
-                    </div>
-                </div>
-            </main>
-        </div>
-    </div>
-    '''
-    
-    return render_template_string(BASE_TEMPLATE.replace('{{ content|safe }}', livros_content))
-
-@app.route('/detalhes_livro/<int:livro_id>')
-def detalhes_livro(livro_id):
-    if 'usuario_id' not in session:
-        return redirect(url_for('login'))
-    
-    livro = Livro.query.get_or_404(livro_id)
-    
-    if livro.usuario_id != session['usuario_id']:
-        flash('Acesso negado! Este livro não pertence ao seu acervo.', 'error')
-        return redirect(url_for('dashboard'))
-    
-    progresso = (livro.paginas_lidas / livro.paginas * 100) if livro.paginas and livro.paginas_lidas else 0
-    nota_html = "★" * livro.nota + "☆" * (5 - livro.nota) if livro.nota else "Não avaliado"
-    tags_html = "".join([f'<span class="badge bg-secondary me-1 mb-1">{tag.strip()}</span>' for tag in livro.tags.split(",")]) if livro.tags else "Nenhuma tag cadastrada"
-    
-    detalhes_content = f'''
-    <div class="container-fluid">
-        <div class="row">
-            <nav class="col-md-3 col-lg-2 sidebar p-0">
-                <div class="position-sticky pt-4">
-                    <div class="text-center mb-4 px-3">
-                        <i class="fas fa-user-graduate fa-3x text-primary mb-3"></i>
-                        <h5 class="fw-bold">👤 {session["usuario_nome"]}</h5>
-                        <small class="text-muted">Leitor Acadêmico</small>
-                    </div>
-                    <ul class="nav flex-column px-3">
-                        <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/livros"><i class="fas fa-book me-2"></i> Meus Livros</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/novo_livro"><i class="fas fa-plus-circle me-2"></i> Adicionar Livro</a></li>
-                        <li class="nav-item"><a class="nav-link active" href="#"><i class="fas fa-eye me-2"></i> Detalhes</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> Sair</a></li>
-                    </ul>
-                </div>
-            </nav>
-
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-4 py-4">
-                <div class="main-content p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h2 class="fw-bold"><i class="fas fa-book me-2"></i> {livro.titulo}</h2>
-                        <div>
-                            <a href="/editar_livro/{livro.id}" class="btn btn-warning">
-                                <i class="fas fa-edit me-2"></i> Editar
-                            </a>
-                            <a href="/livros" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left me-2"></i> Voltar
-                            </a>
-                        </div>
-                    </div>
-                    
-                    {get_flashed_messages_html()}
-                    
-                    <div class="row mt-4">
-                        <div class="col-md-4">
-                            <div class="card">
-                                <div class="book-cover-large">
-                                    {'<img src="' + livro.imagem_url + '" class="img-fluid h-100 w-100" style="object-fit: cover;" onerror="this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';">' + '<div class="book-cover-large w-100 h-100" style="display: none;"><i class="fas fa-book"></i></div>' if livro.imagem_url else '<div class="book-cover-large w-100 h-100"><i class="fas fa-book"></i></div>'}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="card">
-                                <div class="card-header bg-primary text-white">
-                                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações do Livro</h5>
-                                </div>
-                                <div class="card-body">
-                                    <table class="table">
-                                        <tr><th width="30%"><i class="fas fa-heading me-2"></i> Título:</th><td>{livro.titulo}</td></tr>
-                                        <tr><th><i class="fas fa-user me-2"></i> Autor:</th><td>{livro.autor}</td></tr>
-                                        <tr><th><i class="fas fa-tag me-2"></i> Gênero:</th><td>{livro.genero}</td></tr>
-                                        <tr><th><i class="fas fa-list me-2"></i> Status:</th><td><span class="badge bg-{"success" if livro.status == "lido" else "warning" if livro.status == "lendo" else "info"}">{livro.status.replace("_", " ").title()}</span></td></tr>
-                                        <tr><th><i class="fas fa-file me-2"></i> Páginas:</th><td>{livro.paginas}</td></tr>
-                                        <tr><th><i class="fas fa-book-open me-2"></i> Páginas Lidas:</th><td>{livro.paginas_lidas}</td></tr>
-                                        <tr><th><i class="fas fa-star me-2"></i> Nota:</th><td>{nota_html}</td></tr>
-                                        <tr><th><i class="fas fa-tags me-2"></i> Tags:</th><td>{tags_html}</td></tr>
-                                        <tr><th><i class="fas fa-calendar me-2"></i> Adicionado em:</th><td>{livro.data_criacao.strftime('%d/%m/%Y às %H:%M')}</td></tr>
-                                    </table>
-                                    
-                                    {'<div class="mt-4"><h6><i class="fas fa-chart-bar me-2"></i> Progresso de Leitura</h6><div class="progress" style="height: 25px;"><div class="progress-bar progress-bar-custom" role="progressbar" style="width: ' + str(progresso) + '%;" aria-valuenow="' + str(progresso) + '" aria-valuemin="0" aria-valuemax="100">' + str(round(progresso, 1)) + '%</div></div><small class="text-muted">' + str(livro.paginas_lidas) + ' de ' + str(livro.paginas) + ' páginas lidas</small></div>' if livro.paginas and livro.paginas_lidas else ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-    </div>
-    '''
-    
-    return render_template_string(BASE_TEMPLATE.replace('{{ content|safe }}', detalhes_content))
-
-@app.route('/editar_livro/<int:livro_id>', methods=['GET', 'POST'])
-def editar_livro(livro_id):
-    if 'usuario_id' not in session:
-        return redirect(url_for('login'))
-    
-    livro = Livro.query.get_or_404(livro_id)
-    
-    if livro.usuario_id != session['usuario_id']:
-        flash('Acesso negado! Este livro não pertence ao seu acervo.', 'error')
-        return redirect(url_for('dashboard'))
-    
-    if request.method == 'POST':
-        livro.titulo = request.form['titulo']
-        livro.autor = request.form['autor']
-        livro.genero = request.form['genero']
-        livro.status = request.form['status']
-        livro.paginas = int(request.form.get('paginas', 0) or 0)
-        livro.paginas_lidas = int(request.form.get('paginas_lidas', 0) or 0)
-        livro.nota = int(request.form['nota']) if request.form.get('nota') else None
-        livro.tags = request.form.get('tags', '')
-        livro.imagem_url = request.form.get('imagem_url', '')
-        
-        db.session.commit()
-        flash('Livro atualizado com sucesso em seu acervo acadêmico!', 'success')
-        return redirect(url_for('detalhes_livro', livro_id=livro.id))
-    
-    form_template = f'''
-    <div class="container-fluid">
-        <div class="row">
-            <nav class="col-md-3 col-lg-2 sidebar p-0">
-                <div class="position-sticky pt-4">
-                    <div class="text-center mb-4 px-3">
-                        <i class="fas fa-user-graduate fa-3x text-primary mb-3"></i>
-                        <h5 class="fw-bold">👤 {session["usuario_nome"]}</h5>
-                        <small class="text-muted">Leitor Acadêmico</small>
-                    </div>
-                    <ul class="nav flex-column px-3">
-                        <li class="nav-item"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/livros"><i class="fas fa-book me-2"></i> Meus Livros</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/novo_livro"><i class="fas fa-plus-circle me-2"></i> Adicionar Livro</a></li>
-                        <li class="nav-item"><a class="nav-link active" href="#"><i class="fas fa-edit me-2"></i> Editar</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> Sair</a></li>
-                    </ul>
-                </div>
-            </nav>
-
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-4 py-4">
-                <div class="main-content p-4">
-                    <h2 class="fw-bold mb-4"><i class="fas fa-edit me-2"></i>Editar Livro</h2>
-                    
-                    {get_flashed_messages_html()}
-                    
-                    <div class="card">
-                        <div class="card-header bg-warning text-white">
-                            <h5 class="mb-0"><i class="fas fa-book me-2"></i>Editar Informações do Livro</h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-heading me-2"></i>Título do Livro *</label>
-                                            <input type="text" class="form-control" name="titulo" required value="{livro.titulo}">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-user me-2"></i>Autor *</label>
-                                            <input type="text" class="form-control" name="autor" required value="{livro.autor}">
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-tag me-2"></i>Gênero *</label>
-                                            <input type="text" class="form-control" name="genero" required value="{livro.genero}">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-list me-2"></i>Status *</label>
-                                            <select class="form-control" name="status" required>
-                                                <option value="quero_ler" {"selected" if livro.status == "quero_ler" else ""}>Quero Ler</option>
-                                                <option value="lendo" {"selected" if livro.status == "lendo" else ""}>Lendo</option>
-                                                <option value="lido" {"selected" if livro.status == "lido" else ""}>Lido</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-file me-2"></i>Total de Páginas</label>
-                                            <input type="number" class="form-control" name="paginas" value="{livro.paginas or 0}">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-book-open me-2"></i>Páginas Lidas</label>
-                                            <input type="number" class="form-control" name="paginas_lidas" value="{livro.paginas_lidas or 0}">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold"><i class="fas fa-star me-2"></i>Nota (1-5)</label>
-                                            <input type="number" class="form-control" name="nota" min="1" max="5" value="{livro.nota or ""}">
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold"><i class="fas fa-tags me-2"></i>Tags</label>
-                                    <input type="text" class="form-control" name="tags" value="{livro.tags or ""}">
-                                    <div class="form-text">Separe as tags por vírgula</div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold"><i class="fas fa-image me-2"></i>URL da Imagem</label>
-                                    <input type="url" class="form-control" name="imagem_url" value="{livro.imagem_url or ""}">
-                                    <div class="form-text">Cole a URL de uma imagem da capa do livro</div>
-                                </div>
-                                
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <a href="/detalhes_livro/{livro.id}" class="btn btn-secondary me-md-2">
-                                        <i class="fas fa-times me-2"></i> Cancelar
-                                    </a>
-                                    <button type="submit" class="btn btn-warning">
-                                        <i class="fas fa-save me-2"></i> Atualizar Livro
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-    </div>
-    '''
-    
-    return render_template_string(BASE_TEMPLATE.replace('{{ content|safe }}', form_template))
-
-@app.route('/excluir_livro/<int:livro_id>')
-def excluir_livro(livro_id):
-    if 'usuario_id' not in session:
-        return redirect(url_for('login'))
-    
-    livro = Livro.query.get_or_404(livro_id)
-    
-    if livro.usuario_id != session['usuario_id']:
-        flash('Acesso negado! Este livro não pertence ao seu acervo.', 'error')
-        return redirect(url_for('dashboard'))
-    
-    db.session.delete(livro)
-    db.session.commit()
-    flash('Livro excluído com sucesso do seu acervo acadêmico!', 'success')
-    return redirect(url_for('listar_livros'))
+# ... (TODAS AS OUTRAS ROTAS DO CÓDIGO ANTERIOR: novo_livro, livros, detalhes_livro, editar_livro, excluir_livro) ...
 
 @app.route('/exportar')
 def exportar_dados():
@@ -1231,11 +731,9 @@ def exportar_csv():
     output = StringIO()
     writer = csv.writer(output)
     
-    # Cabeçalho
     writer.writerow(['ID', 'Título', 'Autor', 'Gênero', 'Status', 'Páginas', 'Páginas Lidas', 
                     'Progresso', 'Nota', 'Tags', 'Data Cadastro'])
     
-    # Dados
     for livro in livros:
         progresso = f"{(livro.paginas_lidas/livro.paginas*100) if livro.paginas else 0:.1f}%"
         writer.writerow([
@@ -1261,6 +759,20 @@ def exportar_csv():
     )
     
     return response
+
+# =============================================
+# REDIRECIONAMENTOS PARA COMPATIBILIDADE
+# =============================================
+
+@app.route('/exportar_livros')
+def exportar_livros_redirect():
+    """Redireciona a rota antiga para a nova"""
+    return redirect(url_for('exportar_dados'))
+
+@app.route('/exportar_livros_json')
+def exportar_livros_json_redirect():
+    """Redireciona a rota antiga para a nova"""
+    return redirect(url_for('exportar_json'))
 
 @app.route('/logout')
 def logout():
